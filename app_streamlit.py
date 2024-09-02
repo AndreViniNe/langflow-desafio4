@@ -1,17 +1,23 @@
 MAX_FILE_SIZE = 1 * 1024 * 1024 #1Mb
 
 import streamlit as st
-from sqlalchemy.sql import text
+from sqlalchemy.sql import text, create_engine
+from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
 
 #-----------DATABASE CONNECTION-----------
-conn = st.connection(
-    "local_db",
-    type="sql",
-    url="postgresql://postgres:123456@localhost:5432/langflow"
-)
+# conn = st.connection(
+#     "local_db",
+#     type="sql",
+#     url="postgresql://postgres:123456@localhost:5432/langflow"
+# )
 
+@st.cache_resource
+def get_connection():
+    engine = create_engine("postgresql://postgres:123456@localhost:5432/langflow")
+    Session = sessionmaker(bind=engine)
+    return Session()
 
 nome_teste = st.text_input("Nome")
 infos_teste = st.text_input("Infos")
@@ -19,34 +25,47 @@ processamento_teste = st.text_input("Tempo de processamento (yyyy-mm-dd HH:MM:SS
 salvamento_teste = st.file_uploader("Salvamento (PDF)", type=["pdf"])
 
 if st.button("Adicionar na tabela"):
+    
+    session = get_connection()
+
     try:
         processamento_teste_dt = datetime.strptime(processamento_teste, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         st.error("Formato de data e hora inválido. Use o formato: yyyy-mm-dd HH:MM:SS")
         st.stop()
 
+    # Lê o PDF como bytes
     if salvamento_teste is not None:
         salvamento_teste_bin = salvamento_teste.read()
     else:
         salvamento_teste_bin = None
 
-
-    with conn.session as session:
-        insert_query_teste = text("""
-            INSERT INTO langflow_desafio4 (nome_usuario, informacoes_filtro, ultimo_processamento, salvamento_pdf)
+    try:
+        # Cria a query de inserção usando SQLAlchemy e text()
+        insert_query = text("""
+            INSERT INTO sua_tabela (nome_usuario, informacoes_filtro, ultimo_processamento, salvamento_pdf)
             VALUES (:nome_teste, :infos_teste, :processamento_teste, :salvamento_teste)
         """)
-        
-        session.execute(insert_query_teste, {
+
+        # Executa a query com os parâmetros
+        session.execute(insert_query, {
             "nome_teste": nome_teste,
             "infos_teste": infos_teste,
             "processamento_teste": processamento_teste_dt,
             "salvamento_teste": salvamento_teste_bin
         })
-        
+
+        # Confirma a transação
         session.commit()
-    
-    st.success("Dados inseridos com sucesso!")
+        st.success("Dados inseridos com sucesso!")
+
+    except Exception as e:
+        session.rollback()  # Reverte a transação em caso de erro
+        st.error(f"Erro ao inserir os dados: {e}")
+
+    finally:
+        session.close()
+
 
 #-----------STREAMLIT PRINCIPAL PAGE-----------
 st.markdown("## Estagio Delivery ")
