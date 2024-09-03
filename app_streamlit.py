@@ -1,10 +1,16 @@
 MAX_FILE_SIZE = 1 * 1024 * 1024 #1Mb
 
 import streamlit as st
-from sqlalchemy.sql import text, create_engine
+from sqlalchemy import create_engine
+from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
+import os
+from database_infos import DATABASE_HOST, DATABASE_PASSWORD, DATABASE_USERNAME
 
+# password = os.environ["DATABASE_PASSWORD"]
+# username = os.environ["DATABASE_USERNAME"]
+# host = os.environ["DATABASE_HOST"]
 
 #-----------DATABASE CONNECTION-----------
 # conn = st.connection(
@@ -15,9 +21,10 @@ from datetime import datetime
 
 @st.cache_resource
 def get_connection():
-    engine = create_engine("postgresql://postgres:123456@localhost:5432/langflow")
+    engine = create_engine(f"postgresql://{DATABASE_USERNAME}:{DATABASE_PASSWORD}@{DATABASE_HOST}:5432/postgres")
     Session = sessionmaker(bind=engine)
     return Session()
+
 
 nome_teste = st.text_input("Nome")
 infos_teste = st.text_input("Infos")
@@ -43,7 +50,7 @@ if st.button("Adicionar na tabela"):
     try:
         # Cria a query de inserção usando SQLAlchemy e text()
         insert_query = text("""
-            INSERT INTO sua_tabela (nome_usuario, informacoes_filtro, ultimo_processamento, salvamento_pdf)
+            INSERT INTO langflow_desafio4 (nome_usuario, informacoes_filtro, ultimo_processamento, salvamento_pdf)
             VALUES (:nome_teste, :infos_teste, :processamento_teste, :salvamento_teste)
         """)
 
