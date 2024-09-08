@@ -82,7 +82,7 @@ if st.sidebar.button('Submit'):
 st.sidebar.divider()
 
 #-----------STREAMLIT PRINCIPAL PAGE-----------
-st.markdown("## Estagio Delivery ")
+st.markdown("## Job Hero ")
 if st.button("Find the jobs you need based on your preference"):
     #API LANGFLOW
     # r = requests.request("POST", "http://127.0.0.1:7860/api/v1/run/dd54d39d-380b-4892-9269-7cc578452059")
