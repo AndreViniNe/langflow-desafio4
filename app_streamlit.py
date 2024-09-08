@@ -5,6 +5,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from sqlalchemy.orm import sessionmaker
 import requests
+import asyncio
+import pandas as pd
 # from datetime import datetime
 # import time
 # import os
@@ -82,35 +84,59 @@ st.sidebar.divider()
 #-----------STREAMLIT PRINCIPAL PAGE-----------
 st.markdown("## Estagio Delivery ")
 if st.button("Find the jobs you need based on your preference"):
+    #API LANGFLOW
+    # r = requests.request("POST", "http://127.0.0.1:7860/api/v1/run/dd54d39d-380b-4892-9269-7cc578452059")
+    # st.write(r.text)
+
+    async def langflow_request_background():
+        while True:
+            st.write("Processing API request in background for ", user_name)
+            await asyncio.sleep(20)
+
+    async def main_request():
+        task = asyncio.create_task(langflow_request_background())
+        await asyncio.sleep(0)
+
+        result = await asyncio.to_thread(requests.post, "http://127.0.0.1:7860/api/v1/run/dd54d39d-380b-4892-9269-7cc578452059")
+
+        st.success("Processing finished. Here are their best job recommendations:")
+
+
+    # task = asyncio.create_task(langflow_request())
+    asyncio.run(main_request())
 
     session = get_connection()
-    session.execute(
-        text("""
-            UPDATE user_infos
-            SET status = 'Processing...'
-            WHERE user_name = :user_name;
-        """),
-        {
-            'user_name': user_name,
-        }
-    )
-    session.commit()
+    try:
+        query = session.execute(
+            text("""
+                SELECT ui.user_name, ji.job_title, ji.company, ji.company_url, ji.job_description, ji.posting_date,
+                 ji.job_localization, ji.job_search_time, ji.apply_url 
+                FROM job_infos ji
+                JOIN user_infos ui ON ji.user_id = ui.user_id
+                WHERE ui.user_name = :name;
+            """),
+            {
+                'name': user_name,
+            }
+        )
 
-    st.write("Processing...")
+        df = pd.DataFrame(query.fetchall(), columns=query.keys())
+        df = df.drop_duplicates(subset=["job_description"], keep="first")
+    finally:
+        session.close()
 
-    #API LANGFLOW
-    r = requests.get('http://127.0.0.1:7860/api/v1/run/dd54d39d-380b-4892-9269-7cc578452059?stream=false')
-    st.write(r)
+        container = st.container()
+        if not df.empty:
+            # st.dataframe(df)
 
-    st.success("Processed")
-    session.execute(
-        text("""
-            UPDATE user_infos
-            SET status = 'Processed!'
-            WHERE user_name = :user_name;
-        """),
-        {
-            'user_name': user_name,
-        }
-    )
-    session.commit()
+            container.data_editor(
+                df,
+                column_config={
+                    "apply_url": st.column_config.LinkColumn(
+                        "Job url", display_text="Apply now"
+                    ),
+                },
+                hide_index=True)
+
+        else:
+            container.write("0 results.")
