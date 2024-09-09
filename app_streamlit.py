@@ -85,19 +85,20 @@ st.sidebar.divider()
 st.markdown("## Job Hero ")
 if st.button("Find the jobs you need based on your preference"):
     #API LANGFLOW
-    # r = requests.request("POST", "http://127.0.0.1:7860/api/v1/run/dd54d39d-380b-4892-9269-7cc578452059")
+    # r = requests.request("POST", "http://127.0.0.1:7860/api/v1/run/853b597d-5d3b-4994-bcb6-48bc20e9821e")
     # st.write(r.text)
 
     async def langflow_request_background():
-        while True:
-            st.write("Processing API request in background for ", user_name)
-            await asyncio.sleep(20)
+        # write processing message with spinner
+        with st.spinner(f'Processing API request for {user_name}...'):
+            while True:
+                await asyncio.sleep(20)
 
     async def main_request():
         task = asyncio.create_task(langflow_request_background())
         await asyncio.sleep(0)
 
-        result = await asyncio.to_thread(requests.post, "http://127.0.0.1:7860/api/v1/run/dd54d39d-380b-4892-9269-7cc578452059")
+        result = await asyncio.to_thread(requests.post, "http://127.0.0.1:7860/api/v1/run/853b597d-5d3b-4994-bcb6-48bc20e9821e")
 
         st.success("Processing finished. Here are their best job recommendations:")
 
